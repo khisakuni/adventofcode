@@ -1,36 +1,29 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/khisakuni/adventofcode/2018/common"
 )
 
 func main() {
 	fmt.Println("Running day 1")
 
-	f, err := os.Open(filepath.Join("input.txt"))
+	input, err := common.Input(filepath.Join("input.txt"))
 	if err != nil {
-		handleError(err)
-		return
+		common.HandleError(err)
 	}
-	defer f.Close()
-
-	numbers := []int{}
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		i, err := strconv.Atoi(scanner.Text())
+	numbers := make([]int, len(input), len(input))
+	for i, str := range input {
+		num, err := strconv.Atoi(str)
 		if err != nil {
-			handleError(err)
+			common.HandleError(err)
 		}
-		numbers = append(numbers, i)
-	}
-	if err := scanner.Err(); err != nil {
-		handleError(err)
-		return
+		numbers[i] = num
 	}
 
 	fmt.Println("Part 1")
@@ -69,9 +62,4 @@ func reduce(ar []int, agg int) int {
 		agg += n
 	}
 	return agg
-}
-
-func handleError(err error) {
-	fmt.Printf("encountered error: %v\n", err)
-	os.Exit(1)
 }
