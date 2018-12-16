@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	fmt.Println("Running day 2")
+	fmt.Println("Running day 2 part 1")
 
 	input, err := common.Input(filepath.Join("input.txt"))
 	if err != nil {
@@ -36,6 +36,21 @@ func main() {
 	}
 
 	fmt.Printf("Answer is %d\n", two*three)
+
+	fmt.Println("Running day 2 part 2")
+
+	hashMap := map[string][]string{}
+	for _, str := range input {
+		for i := range str {
+			key := str[0:i] + str[i+1:]
+			hashMap[key] = append(hashMap[key], str)
+		}
+	}
+	for k, v := range hashMap {
+		if len(v) == 2 && v[0] != v[1] {
+			fmt.Printf("Answer is %s\n", k)
+		}
+	}
 }
 
 func hasRep(str string, num int) bool {
