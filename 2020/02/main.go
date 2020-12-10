@@ -21,7 +21,7 @@ func main() {
 			continue
 		}
 		 pass := parsePassword(str)
-		 if pass.isValid() {
+		 if pass.isValidV2() {
 		 		count++
 		 }
 	}
@@ -32,7 +32,7 @@ type password struct {
 	letter rune
 	min int
 	max int
-	value string
+	value []rune
 	frequency map[rune]int
 }
 
@@ -56,7 +56,7 @@ func parsePassword(raw string) password {
 		panic(err)
 	}
 	letter := []rune(matches[letterIndex])[0]
-	value := matches[valueIndex]
+	value := []rune(matches[valueIndex])
 	freq := map[rune]int{}
 	for _, v := range value {
 		freq[v]++
@@ -73,4 +73,17 @@ func parsePassword(raw string) password {
 func (p password) isValid() bool {
 	count := p.frequency[p.letter]
 	return count <= p.max && count >= p.min
+}
+
+func (p password) isValidV2() bool {
+	l := len(p.value)
+	if p.min > l {
+		return false
+	}
+	firstMatch := p.value[p.min - 1] == p.letter
+	if p.max > l {
+		return false
+	}
+	lastMatch := p.value[p.max - 1] == p.letter
+	return firstMatch != lastMatch
 }
