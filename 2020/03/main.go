@@ -19,18 +19,31 @@ func main() {
 		}
 		slope = append(slope, []rune(line))
 	}
+	right := []int{1, 3, 5, 7, 1}
+	down := []int{1, 1, 1, 1, 2}
+	var trees []int
+	total := 1
+	for i, r := range right {
+		count := doRun(slope, r, down[i])
+		total = total * count
+		trees = append(trees, count)
+	}
+	fmt.Printf("Trees: %v, total: %d\n", trees, total)
+}
+
+func doRun(slope [][]rune, right int, down int) int {
 	height := len(slope)
 	x := 0
 	width := len(slope[0])
 	var trees int
-	for y := 1; y < height; y++ {
-		x = (x + 3) % width
+	for y := down; y < height; y += down {
+		x = (x + right) % width
 		pos := slope[y][x]
 		if pos == '#' {
 			trees++
 		}
 	}
-	fmt.Printf("Trees: %d\n", trees)
+	return trees
 }
 
 /*
