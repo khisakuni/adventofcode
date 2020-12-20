@@ -33,6 +33,17 @@ func (n *node) hasNode(target, current string) bool {
 	return currentHas
 }
 
+func (n *node) sumChildValues(target string) int {
+	total := 0
+	if n.Nodes[target] == nil {
+		return total
+	}
+	for k, v := range n.Nodes[target].Nodes {
+		total += v.value + (v.value * n.sumChildValues(k))
+	}
+	return total
+}
+
 func newNode(value int) *node {
 	return &node{
 		value: value,
@@ -64,7 +75,7 @@ func main() {
 			}
 			headNode := root.Nodes[head]
 			if headNode == nil {
-				headNode = newNode(0)
+				headNode = newNode(1)
 			}
 			headNode.Nodes[name] = newNode(val)
 			root.Nodes[head] = headNode
@@ -78,4 +89,5 @@ func main() {
 		}
 	}
 	fmt.Printf("%d\n", count)
+	fmt.Printf("%d\n", root.sumChildValues(target))
 }
