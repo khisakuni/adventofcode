@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"math/bits"
 	"strings"
@@ -16,19 +15,24 @@ func main() {
 	groups := strings.Split(string(data), "\n\n")
 	var total int
 	for _, group := range groups {
-		var flags uint = 0
-		for _, c := range group {
-			val := c - 'a'
-			if val < 0 || val > 25 {
+		groupFlags := ^((1 << ('z' - 'a')) & 0)
+		for _, line := range strings.Split(group, "\n") {
+			if line == "" {
 				continue
 			}
-			if (flags & (1 << val)) > 0 {
-				continue
+			flags := 0
+			for _, c := range line {
+				val := c - 'a'
+				if val < 0 || val > 25 {
+					continue
+				}
+				if (flags & (1 << val)) > 0 {
+					continue
+				}
+				flags |= 1 << val
 			}
-			flags |= 1 << val
+			groupFlags &= flags
 		}
-		total += bits.OnesCount(flags)
+		total += bits.OnesCount(uint(groupFlags))
 	}
-	fmt.Printf("total: %d\n", total)
-
 }
