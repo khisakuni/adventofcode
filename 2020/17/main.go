@@ -18,26 +18,19 @@ func (c cell) print() {
 	}
 }
 
-func (c cell) printColor() {
-	if c.active {
-		fmt.Print("\x1b[6;30;42m#\x1b[0m")
-	} else {
-		fmt.Print("\x1b[6;30;42m.\x1b[0m")
-	}
-}
-
 type coords struct {
 	x int
 	y int
 	z int // frame
+	w int
 }
 
+type universe []world
 type world []frame
 type frame []row
 type row []cell
 
 func (w world) printState() {
-	fmt.Println("vvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
 	for z, f := range w {
 		fmt.Printf("z=%d\n", z)
 		for _, slice := range f {
@@ -48,28 +41,42 @@ func (w world) printState() {
 		}
 		fmt.Println()
 	}
-	fmt.Println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 }
 
-func (w world) printStateForCell(coord coords) {
+func (u universe) printState() {
 	fmt.Println("vvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
-	for z, f := range w {
-		fmt.Printf("z=%d\n", z)
-		for y, slice := range f {
-			for x, c := range slice {
-				if z==coord.z && y == coord.y && x ==coord.x {
-					c.printColor()
-					continue
+	for i, w := range u {
+		for z, f := range w {
+			fmt.Printf("z=%d, w=%d\n", z, i)
+			for _, s := range f {
+				for _, c := range s {
+					c.print()
 				}
-				c.print()
+				fmt.Println()
 			}
 			fmt.Println()
 		}
 		fmt.Println()
 	}
+
 	fmt.Println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
 }
 
+func (u universe) cycle() universe {
+	current := u.grow()
+	next := current.copy()
+	for i := 0; i < len(current); i++ {
+		for z := 0; z < current[i].depth(); z++ {
+			for y := 0; y < current[i].height(); y++ {
+				for x := 0; x < current[i].width(); x++ {
+					active := current.isActive(coords{z:z, y:y, x:x, w:i})
+					next[i][z][y][x] = cell{active: active}
+				}
+			}
+		}
+	}
+	return next
+}
 
 func (w world) cycle() world {
 	current := w.grow()
@@ -85,6 +92,19 @@ func (w world) cycle() world {
 	return next
 }
 
+func (u universe) isActive(coord coords) bool {
+	neighbors := u.neighbors(coord)
+	count := activeCount(neighbors)
+	c := u[coord.w][coord.z][coord.y][coord.x]
+	var active bool
+	if c.active {
+		active = count == 2 || count == 3
+	} else {
+		active = count == 3
+	}
+	return active
+}
+
 func (w world) isActive(coord coords) bool {
 	neighbors := w.neighbors(coord)
 	count := activeCount(neighbors)
@@ -96,6 +116,14 @@ func (w world) isActive(coord coords) bool {
 		active = count == 3
 	}
 	return active
+}
+
+func (u universe) copy() universe {
+	dupe := make(universe, len(u))
+	for i, w := range u {
+		dupe[i] = w.copy()
+	}
+	return dupe
 }
 
 func (w world) copy() world {
@@ -110,6 +138,22 @@ func (w world) copy() world {
 		}
 	}
 	return dupe
+}
+
+func (u universe) activeCount() int {
+	var count int
+	for _, w := range u {
+		for _, f := range w {
+			for _, r := range f {
+				for _, c := range r {
+					if c.active {
+						count++
+					}
+				}
+			}
+		}
+	}
+	return count
 }
 
 func (w world) activeCount() int {
@@ -134,6 +178,52 @@ func activeCount(cells []cell) int {
 		}
 	}
 	return count
+}
+
+func (u universe) neighbors(coord coords) []cell {
+	ws := []int{coord.w}
+	if coord.w > 0 {
+		ws = append(ws, coord.w-1)
+	}
+	if coord.w < len(u)-1 {
+		ws = append(ws, coord.w+1)
+	}
+	zs := []int{coord.z}
+	if coord.z > 0 {
+		zs = append(zs, coord.z-1)
+	}
+	if coord.z < u[0].depth()-1 {
+		zs = append(zs, coord.z+1)
+	}
+	ys := []int{coord.y}
+	if coord.y > 0 {
+		ys = append(ys, coord.y-1)
+	}
+	if coord.y < u[0].height()-1 {
+		ys = append(ys, coord.y+1)
+	}
+	xs := []int{coord.x}
+	if coord.x > 0 {
+		xs = append(xs, coord.x-1)
+	}
+	if coord.x < u[0].width()-1 {
+		xs = append(xs, coord.x+1)
+	}
+
+	var neighbors []cell
+	for _, w := range ws {
+		for _, z := range zs {
+			for _, y := range ys {
+				for _, x := range xs {
+					if z == coord.z && y == coord.y && x == coord.x && w == coord.w {
+						continue
+					}
+					neighbors = append(neighbors, u[w][z][y][x])
+				}
+			}
+		}
+	}
+	return neighbors
 }
 
 func (w world) neighbors(coord coords) []cell {
@@ -171,6 +261,39 @@ func (w world) neighbors(coord coords) []cell {
 		}
 	}
 	return neighbors
+}
+
+func (u universe) grow() universe {
+	next := u
+	for i := range next {
+		next[i] = next[i].grow()
+	}
+
+	depth := next[0].depth()
+	height := next[0].height()
+	width := next[0].width()
+	before := make(world, depth)
+	for z := range before {
+		frames := make(frame, height)
+		for y := range frames {
+			frames[y] = make(row, width)
+		}
+		before[z] = frames
+	}
+
+	after := make(world, depth)
+	for z := range after {
+		frames := make(frame, height)
+		for y := range frames {
+			frames[y] = make(row, width)
+		}
+		after[z] = frames
+	}
+
+	next = append(universe{before}, next...)
+	next = append(next, after)
+
+	return next
 }
 
 func (w world) grow() world {
@@ -228,8 +351,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	w := world{}
-	w = append(w, frame{})
+	u := universe{}
+	u = append(u, world{frame{}})
+	w := u[0]
 	for _, line := range strings.Split(string(data), "\n") {
 		if len(line) == 0 {
 			continue
@@ -245,7 +369,8 @@ func main() {
 		f := w[0]
 		w[0] = append(f, slice)
 	}
-	w = w.cycle().cycle().cycle().cycle().cycle().cycle()
-	fmt.Printf("active: %d\n", w.activeCount())
+	u = u.cycle().cycle().cycle().cycle().cycle().cycle()
+	//u.printState()
+	fmt.Printf("active: %d\n", u.activeCount())
 }
 
