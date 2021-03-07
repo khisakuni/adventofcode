@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type seatMap map[string]seat
@@ -12,7 +13,7 @@ type seatMap map[string]seat
 type seat rune
 
 const (
-	seatStateFloor rune = '.'
+	seatStateFloor seat = '.'
 	seatStateOccupied = '#'
 	seatStateVacant = 'L'
 )
@@ -22,6 +23,32 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	m := readMap(data)
+
+	// part 1
+	part1Start := time.Now()
+	changed := true
+	for changed {
+		m, changed = cycle(m)
+	}
+	fmt.Printf("part 1 took: %v", time.Since(part1Start))
+	fmt.Printf("count: %d\n", countOccupied(m))
+
+	// part 2
+	m2 := readMap(data)
+	part2Start := time.Now()
+	changed = true
+	for changed {
+		m2, changed = cyclePart2(m2)
+	}
+	fmt.Printf("part 2 took %v", time.Since(part2Start))
+
+
+	fmt.Printf("count: %d\n", countOccupied(m2))
+}
+
+func readMap(data []byte) seatMap {
 	m := seatMap{}
 	for i, row := range strings.Split(string(data), "\n")  {
 		if row == "" {
@@ -31,12 +58,7 @@ func main() {
 			m[seatKey(i, j)] = seat(col)
 		}
 	}
-
-	changed := true
-	for changed {
-		m, changed = cycle(m)
-	}
-	fmt.Printf("count: %d\n", countOccupied(m))
+	return m
 }
 
 func print(m seatMap) {
@@ -77,6 +99,26 @@ func cycle(m seatMap) (seatMap, bool) {
 	return next, changed
 }
 
+func cyclePart2(m seatMap) (seatMap, bool) {
+	var changed bool
+	next := seatMap{}
+	for k, v := range m {
+		nextState := v
+		count := occupiedNeighborCount(m, k)
+		if v == seatStateOccupied && count >= 5 {
+			nextState = seatStateVacant
+		}
+		if v == seatStateVacant && count == 0 {
+			nextState = seatStateOccupied
+		}
+		if !changed && v != nextState {
+			changed = true
+		}
+		next[k] = nextState
+	}
+	return next, changed
+}
+
 func countOccupied(m seatMap) int {
 	var count int
 	for _, v := range m {
@@ -104,6 +146,43 @@ func neighborKeys(key string) []string {
 		seatKey(row+1, col),
 		seatKey(row+1, col+1),
 	}
+}
+
+func occupiedNeighborCount(m seatMap, key string) int {
+	var count int
+	neighbors := []bool{
+		isNeighborOccupied(m, key, -1, -1), // top left
+		isNeighborOccupied(m, key, -1, 0), // top
+		isNeighborOccupied(m, key, -1, 1), // top right
+
+		isNeighborOccupied(m, key, 0, -1), // left
+		isNeighborOccupied(m, key, 0, 1), // right
+
+		isNeighborOccupied(m, key, 1, -1), // bottom left
+		isNeighborOccupied(m, key, 1, 0), // bottom
+		isNeighborOccupied(m, key, 1, 1), // bottom right
+	}
+	for _, neighborIsOccupied := range neighbors {
+		if neighborIsOccupied {
+			count++
+		}
+	}
+	return count
+}
+
+func isNeighborOccupied(m seatMap, current string, rowOffset, colOffset int) bool {
+	row, col := parseKey(current)
+	neighborRow := row+rowOffset
+	neighborCol := col+colOffset
+	neighborKey := seatKey(neighborRow, neighborCol)
+	neighborSeat, ok := m[neighborKey]
+	if !ok {
+		return false
+	}
+	if neighborSeat == seatStateFloor {
+		return isNeighborOccupied(m, neighborKey, rowOffset, colOffset)
+	}
+	return neighborSeat == seatStateOccupied
 }
 
 func seatKey(row, col int) string {
