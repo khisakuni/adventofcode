@@ -152,11 +152,8 @@ func part1(p *pos, directionIndex int, d direction, units int) int {
 		directionIndex = (directionIndex + turnUnits) % len(compass)
 		fmt.Printf("turning right: %v, %v\n", units/90, string(compass[directionIndex]))
 	case directionLeft:
-		turnUnits := units / -90
-		directionIndex = directionIndex + (turnUnits % len(compass))
-		if directionIndex < 0 {
-			directionIndex = len(compass) + directionIndex
-		}
+		turnUnits := units / 90
+		directionIndex = (directionIndex + (-1+len(compass))*turnUnits) % len(compass)
 		fmt.Printf("turning left: %v, %v\n", string(compass[directionIndex]), units/-90)
 	case directionForward:
 		advance(p, compass[directionIndex], units)
@@ -165,7 +162,6 @@ func part1(p *pos, directionIndex int, d direction, units int) int {
 }
 
 func advance(p *pos, d direction, units int) {
-	fmt.Printf("moving %s by %d\n", string(d), units)
 	switch d {
 	case directionNorth:
 		p.lat += units
@@ -176,7 +172,6 @@ func advance(p *pos, d direction, units int) {
 	case directionWest:
 		p.long -= units
 	}
-	fmt.Printf("pos: %+v\n\n", p)
 }
 
 func manhattanValue(p pos) float64 {
