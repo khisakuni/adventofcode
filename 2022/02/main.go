@@ -11,9 +11,6 @@ var (
 		"A": "Rock",
 		"B": "Paper",
 		"C": "Scissors",
-		"X": "Rock",
-		"Y": "Paper",
-		"Z": "Scissors",
 	}
 
 	shapeToPoints = map[string]int{
@@ -22,7 +19,7 @@ var (
 		"Scissors": 3,
 	}
 
-	shapeToBeat = map[string]string{
+	shapeToLose = map[string]string{
 		"Rock":     "Scissors",
 		"Paper":    "Rock",
 		"Scissors": "Paper",
@@ -44,16 +41,21 @@ func main() {
 
 		parts := strings.Split(str, " ")
 		opponent := codeToShape[parts[0]]
-		self := codeToShape[parts[1]]
+		outcome := parts[1]
 
-		switch {
-		case opponent == self:
-			points += 3
-		case opponent == shapeToBeat[self]:
-			points += 6
+		switch outcome {
+		case "X":
+			self := shapeToLose[opponent]
+			points += shapeToPoints[self]
+			// Lose
+		case "Y":
+			// Tie
+			points += shapeToPoints[opponent] + 3
+		case "Z":
+			// Win
+			self := shapeToLose[shapeToLose[opponent]]
+			points += shapeToPoints[self] + 6
 		}
-
-		points += shapeToPoints[self]
 	}
 
 	fmt.Printf("Points: %d\n", points)
