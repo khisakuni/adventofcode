@@ -29,9 +29,11 @@ func main() {
 		elf2Min, _ := strconv.Atoi(elf2[0])
 		elf2Max, _ := strconv.Atoi(elf2[1])
 
-		elf1InElf2 := elf1Min >= elf2Min && elf1Max <= elf2Max
-		elf2InElf1 := elf2Min >= elf1Min && elf2Max <= elf1Max
-		if elf1InElf2 || elf2InElf1 {
+		hasOverlap := (elf1Max <= elf2Max && elf1Max >= elf2Min) ||
+			(elf1Min >= elf2Min && elf1Min <= elf2Max) ||
+			(elf2Max <= elf1Max && elf2Max >= elf1Min) ||
+			(elf2Min >= elf1Min && elf2Min <= elf1Max)
+		if hasOverlap {
 			count++
 		}
 	}
