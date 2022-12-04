@@ -13,34 +13,49 @@ func main() {
 		panic(err)
 	}
 
-	reLower := regexp.MustCompile("[a-z]")
-
 	strs := strings.Split(string(input), "\n")
 	var sum int32
-	for _, str := range strs {
+	m := map[rune]bool{}
+	for i, str := range strs {
 		if str == "" {
 			continue
 		}
 
-		first := str[:len(str)/2]
-		second := str[len(str)/2:]
-		m := map[rune]struct{}{}
-		for _, c := range first {
-			m[c] = struct{}{}
-		}
+		switch i % 3 {
+		case 0:
+			// Reset
+			m = map[rune]bool{}
 
-		for _, c := range second {
-			if _, ok := m[c]; ok {
-				if isLower := reLower.MatchString(string(c)); isLower {
-					sum += c - 'a' + 1
+			// Populate
+			for _, c := range str {
+				m[c] = false
+			}
+		case 1:
+			// Set val to true if duplicate
+			for _, c := range str {
+				if _, ok := m[c]; ok {
+					m[c] = true
+				}
+			}
+		case 2:
+			// If entry exists and value is true, it's in all three.
+			for _, c := range str {
+				if val, ok := m[c]; ok && val {
+					sum += priority(c)
 					break
 				}
-
-				sum += c - 'A' + 27
-				break
 			}
 		}
 	}
 
 	fmt.Printf("Sum: %d\n", sum)
+}
+
+func priority(r rune) int32 {
+	reLower := regexp.MustCompile("[a-z]")
+	if isLower := reLower.MatchString(string(r)); isLower {
+		return r - 'a' + 1
+	}
+
+	return r - 'A' + 27
 }
