@@ -13,11 +13,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	//	input := `
-	//    [D]
+	//input := `
+	//   [D]
 	//[N] [C]
 	//[Z] [M] [P]
-	// 1   2   3
+	//1   2   3
 	//
 	//move 1 from 2 to 1
 	//move 3 from 1 to 3
@@ -45,12 +45,10 @@ func main() {
 			src, _ := strconv.Atoi(moves[0][2])
 			dest, _ := strconv.Atoi(moves[0][3])
 			//fmt.Printf(">> %v, %v, %v, %v\n", moves[0], count, src, dest)
-			for i := 0; i < count; i++ {
-				srcStr := crates[src]
-				//fmt.Printf("%v -> %v\n", crates[dest], crates[dest]+string(srcStr[len(srcStr)-1]))
-				crates[dest] = crates[dest] + string(srcStr[len(srcStr)-1])
-				crates[src] = srcStr[:len(srcStr)-1]
-			}
+			srcStr := crates[src]
+			//fmt.Printf("%v -> %v\n", crates[dest], crates[dest]+string(srcStr[len(srcStr)-1]))
+			crates[dest] = crates[dest] + srcStr[len(srcStr)-count:]
+			crates[src] = srcStr[:len(srcStr)-count]
 		}
 
 		//fmt.Printf("> %v\n", crates)
@@ -58,7 +56,7 @@ func main() {
 
 	result := make([]string, len(crates))
 	for i, c := range crates {
-		fmt.Printf("%d: %v\n", i, c)
+		//fmt.Printf("%d: %v\n", i, c)
 		result[i-1] = string(c[len(c)-1])
 	}
 	fmt.Printf("Result: %v\n", strings.Join(result, ""))
