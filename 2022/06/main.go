@@ -28,7 +28,7 @@ func main() {
 
 			m[string(c)] = i
 
-			if i-startIndex == 3 {
+			if i-startIndex == 13 {
 				fmt.Printf("Pos: %v\n", i+1)
 				break
 			}
