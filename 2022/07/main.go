@@ -25,12 +25,11 @@ func main() {
 	fileRegex := regexp.MustCompile(`^([0-9]+) ([a-z.]+)$`)
 	dirRegex := regexp.MustCompile(`^dir ([a-z]+)$`)
 
-	stack := []*node{
-		{
-			name:     "ROOT",
-			subNodes: map[string]*node{},
-		},
+	r := &node{
+		name:     "ROOT",
+		subNodes: map[string]*node{},
 	}
+	stack := []*node{r}
 
 	var parts []string
 
@@ -144,13 +143,31 @@ func main() {
 		head = nextHead
 	}
 
-	var size int
-	for _, n := range m {
-		if n != nil {
-			size += n.size
-			//fmt.Printf("name: %s, size: %d\n", name, n.size)
+	root := r.subNodes["/"]
+	used := 70000000 - root.size
+	need := 30000000 - used
+
+	var queue []*node
+
+	queue = append(queue, root)
+	min := -1
+	for len(queue) > 0 {
+		n := queue[0]
+		queue = queue[1:]
+
+		diff := n.size - need
+		if diff < 0 {
+			continue
+		}
+
+		if min == -1 || diff < min {
+			min = n.size
+		}
+
+		for _, s := range n.subNodes {
+			queue = append(queue, s)
 		}
 	}
 
-	fmt.Printf("Size: %v\n", size)
+	fmt.Printf(">> %v\n", min)
 }
