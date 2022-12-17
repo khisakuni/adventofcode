@@ -13,7 +13,7 @@ func main() {
 		panic(err)
 	}
 
-	//	input = []byte(`
+	//input = []byte(`
 	//30373
 	//25512
 	//65332
@@ -32,8 +32,10 @@ func main() {
 	}
 
 	var totalVisible int
+	var max int
 	for point, tree := range trees {
 		visible := 0
+		score := 1
 		for _, direction := range []image.Point{
 			// Top
 			{0, -1},
@@ -51,21 +53,25 @@ func main() {
 				// Hit the border
 				if !ok {
 					visible = 1
+					score *= i - 1
 					break
 				}
 
 				// Neighboring tree is taller than this tree.
 				if neighbor >= tree {
+					score *= i
 					break
 				}
 
 				i++
 			}
-
 		}
 
+		if score > max {
+			max = score
+		}
 		totalVisible += visible
 	}
 
-	fmt.Printf("visible: %d\n", totalVisible)
+	fmt.Printf("visible: %d, score: %d\n", totalVisible, max)
 }
