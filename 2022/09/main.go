@@ -3,9 +3,7 @@ package main
 import (
 	"fmt"
 	"image"
-	"math"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -24,7 +22,7 @@ func main() {
 	//D 1
 	//L 5
 	//R 2
-	//`)
+	//	`)
 
 	directions := map[string]image.Point{
 		"U": {X: 0, Y: -1},
@@ -33,10 +31,10 @@ func main() {
 		"L": {X: -1, Y: 0},
 	}
 
-	head := image.Point{X: 0, Y: 0}
-	tail := head
+	rope := make([]image.Point, 2)
 	visited := map[image.Point]bool{
-		tail: true,
+		// Starting position.
+		image.Point{}: true,
 	}
 	strs := strings.Split(string(input), "\n")
 	for _, str := range strs {
@@ -44,64 +42,63 @@ func main() {
 			continue
 		}
 
-		// Get the direction name and counhead.
-		parts := strings.Split(str, " ")
-		d := parts[0]
-		count, _ := strconv.Atoi(parts[1])
+		// Parse the direction and count from input.
+		var d string
+		var count int
+		_, _ = fmt.Sscanf(str, "%s %d", &d, &count)
 
 		// Get the direction in image.Point form.
 		direction := directions[d]
 
+		fmt.Printf(">> %v, %v\n", d, count)
+
 		for i := 0; i < count; i++ {
-			// Move the head.
-			head = head.Add(direction)
+			// Update head.
+			rope[0] = rope[0].Add(direction)
 
-			// Check if bottom needs to move.
-			//r := image.Rectangle{
-			//	Min: image.Point{
-			//		X: head.X - 1,
-			//		Y: head.Y - 1,
-			//	},
-			//	Max: image.Point{
-			//		X: head.X + 1,
-			//		Y: head.Y + 1,
-			//	},
-			//}
+			// Iterate over rest of rope.
+			for j := 1; j < len(rope); j++ {
+				// Get the difference between one ahead and this one.
+				diff := rope[j-1].Sub(rope[j])
 
-			dist := math.Sqrt(math.Pow(float64(head.X-tail.X), 2) + math.Pow(float64(head.Y-tail.Y), 2))
-			//fmt.Printf("dist: %v\n", dist)
-			if dist >= 2 {
-				// Move the bottom.
-				switch d {
-				case "U":
-					tail = image.Point{
-						X: head.X,
-						Y: head.Y + 1,
+				fmt.Printf("diff: %v\n", diff)
+
+				// If vertical or horizontal difference is more than 1, need to move.
+				if diff.X > 1 || diff.X < -1 || diff.Y > 1 || diff.Y < -1 {
+
+					// Get the next X.
+					var x int
+					switch {
+					case diff.X < 0:
+						x = -1
+					case diff.X > 0:
+						x = 1
+					default:
+						x = 0
 					}
-				case "R":
-					tail = image.Point{
-						X: head.X - 1,
-						Y: head.Y,
+
+					// Get the next Y.
+					var y int
+					switch {
+					case diff.Y < 0:
+						y = -1
+					case diff.Y > 0:
+						y = 1
+					default:
+						y = 0
 					}
-				case "D":
-					tail = image.Point{
-						X: head.X,
-						Y: head.Y - 1,
-					}
-				case "L":
-					tail = image.Point{
-						X: head.X + 1,
-						Y: head.Y,
-					}
+
+					rope[j] = rope[j].Add(image.Point{
+						X: x,
+						Y: y,
+					})
 				}
 
-				// Add entry to map.
-				visited[tail] = true
+				if j == len(rope)-1 {
+					visited[rope[j]] = true
+				}
 			}
-
-			//fmt.Printf(">> direction: %v, count: %v, head: %v, tail: %v\n", d, count, head, tail)
 		}
-
 	}
 
 	fmt.Printf("visited: %v\n", len(visited))
