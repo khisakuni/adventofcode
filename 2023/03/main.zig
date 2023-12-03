@@ -58,7 +58,8 @@ pub fn main() !void {
                 id += 1;
             }
 
-            if (isSymbol(c)) {
+            // if (isSymbol(c)) {
+            if (isGear(c)) {
                 // std.debug.print(">>>> {c}, {d}:{d}\n", .{ c, y, x });
                 var entry = try sym_coords.getOrPut(y);
                 if (!entry.found_existing) {
@@ -77,20 +78,28 @@ pub fn main() !void {
 
         x += 1;
     }
-
-    // for (0.., nums.items) |i, num| {
-    //     std.debug.print("{d} -> {d}\n", .{ i, num });
+    //
+    // var iterr = coords_to_id.iterator();
+    // while (iterr.next()) |n| {
+    //     // var s_num = nums.items[@as(usize, @intCast(n.key_ptr.*))];
+    //     var iterrr = n.value_ptr.*.iterator();
+    //     while (iterrr.next()) |n2| {
+    //         std.debug.print("num: ({d}:{d}) -> {d} ({d})\n", .{ n.key_ptr.*, n2.key_ptr.*, n2.value_ptr.*, nums.items[@as(usize, @intCast(n.key_ptr.*))] });
+    //     }
     // }
 
     var sum: i32 = 0;
     var iter = sym_coords.iterator();
-    var set = std.AutoHashMap(i16, void).init(allocator);
-    defer set.deinit();
+    // var set = std.AutoHashMap(i16, void).init(allocator);
     while (iter.next()) |entry| {
         var sy = entry.key_ptr.*;
         var x_vals = entry.value_ptr.*;
         var x_iter = x_vals.iterator();
+
         while (x_iter.next()) |x_entry| {
+            var set = std.AutoHashMap(i16, void).init(allocator);
+            defer set.deinit();
+
             var sx = x_entry.key_ptr.*;
             // std.debug.print("y: {d} x:{d}\n", .{ sy, sx });
 
@@ -162,22 +171,21 @@ pub fn main() !void {
                 if (coords_to_id.get(sy + 1)) |*e| {
                     if (e.get(sx + 1)) |num_id| {
                         // std.debug.print("found num: {d}:{d} -> {d}\n", .{ sy, sx, nums.items[@as(usize, @intCast(num_id))] });
-                        // try set.put(nums.items[@as(usize, @intCast(num_id))], {});
                         try set.put(num_id, {});
                     }
                 }
             }
+
+            if (set.count() == 2) {
+                var n: i32 = 1;
+                var s_iter = set.iterator();
+                while (s_iter.next()) |s_entry| {
+                    var s_num = nums.items[@as(usize, @intCast(s_entry.key_ptr.*))];
+                    n *= s_num;
+                }
+                sum += n;
+            }
         }
-    }
-
-    // 5 + 7 + 4 + 13 + 9 + 15 + 9
-    var i = set.iterator();
-    while (i.next()) |e| {
-
-        // try set.put(nums.items[@as(usize, @intCast(num_id))], {});
-        var n = nums.items[@as(usize, @intCast(e.key_ptr.*))];
-        // std.debug.print("num!: {d}\n", .{n});
-        sum += n;
     }
 
     std.debug.print("sum: {d}\n", .{sum});
@@ -193,4 +201,8 @@ fn isNewLine(c: u8) bool {
 
 fn isSymbol(c: u8) bool {
     return !isNumber(c) and !isNewLine(c) and c != '.';
+}
+
+fn isGear(c: u8) bool {
+    return c == '*';
 }
