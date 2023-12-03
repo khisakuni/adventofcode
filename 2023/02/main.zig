@@ -18,45 +18,40 @@ pub fn main() !void {
     const buffer = try file.readToEndAlloc(allocator, file_size);
     defer allocator.free(buffer);
 
-    var map = std.StringHashMap(u8).init(allocator);
-    defer map.deinit();
-
-    try map.put("red", 12);
-    try map.put("green", 13);
-    try map.put("blue", 14);
-
     var iter = std.mem.split(u8, buffer, "\n");
-    var total: i16 = 0;
+    var total: i32 = 0;
     while (iter.next()) |line| {
-        // std.debug.print("line: {s}\n", .{line});
+        if (std.mem.eql(u8, line, "")) {
+            continue;
+        }
         var line_iter = std.mem.splitAny(u8, line, ":;");
 
         var game_num_parts_iter = std.mem.splitBackwardsAny(u8, line_iter.next().?, " ");
-        var num = try std.fmt.parseInt(i16, game_num_parts_iter.next().?, 10);
+        var num = try std.fmt.parseInt(i32, game_num_parts_iter.next().?, 10);
 
-        std.debug.print(" >> {d}\n", .{num});
+        std.debug.print("game: {d}\n", .{num});
 
-        var isValid = true;
+        var mins = std.StringHashMap(i32).init(allocator);
+        defer mins.deinit();
+
         while (line_iter.next()) |parts| {
             var it = std.mem.splitAny(u8, parts, ",");
+
             while (it.next()) |part| {
                 var i = std.mem.splitAny(u8, part, " ");
-                var colorNum: i16 = 0;
-                // var mins = std.StringHashMap(i16).init(allocator);
-                // defer mins.deinit();
+                var colorNum: i32 = 0;
 
                 while (i.next()) |p| {
                     if (std.mem.eql(u8, p, "")) {
                         continue;
                     }
 
-                    var n = std.fmt.parseInt(i16, p, 10) catch {
-                        const limit = map.get(p).?;
-                        if (colorNum > limit) {
-                            isValid = false;
+                    var n = std.fmt.parseInt(i32, p, 10) catch {
+                        const currentMin = mins.get(p) orelse 0;
+                        if (colorNum > currentMin) {
+                            try mins.put(p, colorNum);
                         }
 
-                        std.debug.print(">>>>>>> {s} {d}, limit: {d}\n", .{ p, colorNum, limit });
                         continue;
                     };
 
@@ -65,10 +60,13 @@ pub fn main() !void {
             }
         }
 
-        if (isValid) {
-            total += num;
+        var mins_iter = mins.iterator();
+        var pow: i32 = 1;
+        while (mins_iter.next()) |entry| {
+            pow *= entry.value_ptr.*;
         }
-        isValid = true;
+
+        total += pow;
     }
 
     std.debug.print("total: {d}\n", .{total});
