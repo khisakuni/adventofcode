@@ -20,10 +20,19 @@ pub fn main() !void {
 
     var total: i32 = 0;
     var lines_iter = std.mem.splitAny(u8, buffer, "\n");
+    var set = std.AutoHashMap(i32, i32).init(allocator);
+    defer set.deinit();
+
+    var card: i32 = 0;
     while (lines_iter.next()) |line| {
         if (line.len == 0) {
             continue;
         }
+        card += 1;
+        var current_card_num = set.get(card) orelse 0;
+        current_card_num += 1;
+        try set.put(card, current_card_num);
+
         var line_iter = std.mem.splitAny(u8, line, "|");
         var win = line_iter.next().?;
         var have = line_iter.next().?;
@@ -77,11 +86,25 @@ pub fn main() !void {
                 }
             }
         }
-        if (count > 0) {
-            const score = std.math.pow(i32, 2, count - 1);
-            total += score;
-            // std.debug.print("count: {d}: {d}\n", .{ count, score });
+        // if (count > 0) {
+        //     const score = std.math.pow(i32, 2, count - 1);
+        //     total += score;
+        //     // std.debug.print("count: {d}: {d}\n", .{ count, score });
+        // }
+        // std.debug.print("card: {d}:{d}\n", .{ card, count });
+        var j: i32 = 1;
+
+        while (j <= count) {
+            var current = set.get(card + j) orelse 0;
+            try set.put(card + j, current + current_card_num);
+            j += 1;
         }
+    }
+
+    var set_iter = set.iterator();
+    while (set_iter.next()) |entry| {
+        // std.debug.print("card: {d} : {d}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
+        total += entry.value_ptr.*;
     }
 
     std.debug.print("total: {d}\n", .{total});
