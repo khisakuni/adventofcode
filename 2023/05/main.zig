@@ -13,8 +13,8 @@ pub fn main() !void {
     const buffer = try file.readToEndAlloc(allocator, file_size);
     defer allocator.free(buffer);
 
-    var seeds = std.ArrayList(i64).init(allocator);
-    defer seeds.deinit();
+    var seed_ranges = std.ArrayList(i64).init(allocator);
+    defer seed_ranges.deinit();
 
     var seeds_delim = "seeds:";
 
@@ -31,8 +31,8 @@ pub fn main() !void {
             var seeds_words = line[seeds_delim.len + 1 .. line.len];
             var seeds_iter = std.mem.splitAny(u8, seeds_words, " ");
             while (seeds_iter.next()) |seed_word| {
-                var seed = try std.fmt.parseInt(i64, seed_word, 10);
-                try seeds.append(seed);
+                var seed = try std.fmt.parseUnsigned(i64, seed_word, 10);
+                try seed_ranges.append(seed);
             }
             continue;
         }
@@ -40,7 +40,6 @@ pub fn main() !void {
         // New line between maps, or seed and map sections.
         if (line.len == 0) {
             if (transform.items.len > 0) {
-                // std.debug.print("appending! {d}\n", .{transform.items.len});
                 try transforms.append(transform);
                 transform = std.ArrayList([3]i64).init(allocator);
             }
@@ -55,31 +54,104 @@ pub fn main() !void {
         var dest_start = try std.fmt.parseInt(i64, nums.next().?, 10);
         var src_start = try std.fmt.parseInt(i64, nums.next().?, 10);
         var offset = try std.fmt.parseInt(i64, nums.next().?, 10);
-        // std.debug.print("{d}, {d}, {d}\n", .{ dest_start, src_start, offset });
         var list = [3]i64{ dest_start, src_start, offset };
         try transform.append(list);
     }
 
-    var min: i64 = seeds.items[0];
-    for (seeds.items[1..]) |seed| {
-        var next: i64 = seed;
+    var deduped_ranges = std.ArrayList(i64).init(allocator);
+    defer deduped_ranges.deinit();
+
+    var min: i64 = -1;
+    var i: usize = 0;
+    var ranges = std.ArrayList([2]i64).init(allocator);
+    defer ranges.deinit();
+
+    while (i + 1 < seed_ranges.items.len) {
+        try ranges.append([2]i64{ seed_ranges.items[i], seed_ranges.items[i] + seed_ranges.items[i + 1] });
+        i += 2;
+    }
+
+    for (ranges.items) |range| {
+        var current = std.ArrayList([2]i64).init(allocator);
+        defer current.deinit();
+
+        try current.append(range);
 
         for (transforms.items) |t| {
-            for (t.items) |item| {
-                var dest_start = item[0];
-                var src_start = item[1];
-                var offset = item[2];
+            // std.debug.print("transform: {d}\n", .{index});
+            var next = std.ArrayList([2]i64).init(allocator);
+            while (current.items.len > 0) {
+                var current_range = current.pop();
+                var added = false;
 
-                if (next >= src_start and next <= src_start + offset) {
-                    next = dest_start + (next - src_start);
-                    break;
+                for (t.items) |item| {
+                    var dest_start = item[0];
+                    var src_start = item[1];
+                    var offset = item[2];
+
+                    const start = current_range[0];
+                    const end = current_range[1];
+
+                    const diff = dest_start - src_start;
+
+                    // Complete overlap.
+                    if (start >= src_start and end <= src_start + offset) {
+                        // std.debug.print("complete overlap\n", .{});
+                        try next.append([2]i64{ start + diff, end + diff });
+                        added = true;
+                        break;
+                    }
+
+                    // Front overlap.
+                    if (start > src_start and start < src_start + offset and end > src_start + offset) {
+                        // std.debug.print("front overlap\n", .{});
+                        // Add overlapping part to next.
+                        try next.append([2]i64{ start + diff, src_start + offset + diff });
+                        added = true;
+
+                        // Add non-overlapping part for further processing.
+                        try current.append([2]i64{ src_start + offset, end });
+                        break;
+                    }
+
+                    // Back overlap.
+                    if (start < src_start and end > src_start and end < src_start + offset) {
+                        // std.debug.print("back overlap\n", .{});
+                        // Add overlapping part to next.
+                        try next.append([2]i64{ src_start + diff, end + diff });
+                        added = true;
+
+                        // Add non-overlapping part for further processing.
+                        try current.append([2]i64{ start, src_start });
+                        break;
+                    }
+
+                    // Split.
+                    if (start < src_start and end > src_start + offset) {
+                        // std.debug.print("split overlap\n", .{});
+                        try next.append([2]i64{ src_start + diff, src_start + offset + diff });
+
+                        try current.append([2]i64{ start, src_start });
+                        try current.append([2]i64{ src_start + offset, end });
+                    }
+                }
+
+                if (!added) {
+                    try next.append(current_range);
                 }
             }
+
+            current = next;
         }
 
-        // std.debug.print("{d} -> {d}\n", .{ seed, next });
-        if (next < min) {
-            min = next;
+        for (current.items) |r| {
+            if (min < 0) {
+                min = r[0];
+            }
+
+            if (r[0] < min) {
+                min = r[0];
+            }
         }
     }
 
