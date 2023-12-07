@@ -20,7 +20,7 @@ var cardToScore = map[rune]int{
 	'A': 14,
 	'K': 13,
 	'Q': 12,
-	'J': 11,
+	'J': 1,
 	'T': 10,
 }
 
@@ -46,8 +46,14 @@ func main() {
 		}
 
 		cards := make([]int, 15)
+		var jokers int
 		for _, card := range hand {
-			cards[cardScore(card)]++
+			if card == 'J' {
+				jokers++
+			} else {
+				cards[cardScore(card)]++
+			}
+
 		}
 
 		var name string
@@ -59,18 +65,15 @@ func main() {
 			// 5 of a kind
 			case count == 5:
 				category = 6
-				name = "5 of a kind"
 				break
 			// 4 of a kind
 			case count == 4:
 				category = 5
-				name = "4 of a kind"
 				break
 			case count == 3:
 				// Full house
 				if hasPair {
 					category = 4
-					name = "full house"
 					break
 				}
 				has3OAK = true
@@ -78,12 +81,10 @@ func main() {
 				// 2 pair
 				if hasPair {
 					category = 2
-					name = "2 pair"
 					break
 				}
 				if has3OAK {
 					category = 4
-					name = "full house"
 					break
 				}
 				hasPair = true
@@ -92,14 +93,74 @@ func main() {
 
 		if category < 0 {
 			if has3OAK {
-				name = "3 of a kind"
 				category = 3
 			} else if hasPair {
-				name = "1 pair"
 				category = 1
 			} else {
 				category = 0
 			}
+		}
+
+		if jokers > 0 {
+			switch category {
+			case 6:
+			case 5:
+				if jokers > 0 {
+					category++
+				}
+			case 4:
+				if jokers > 0 {
+					category += jokers
+				}
+			case 3:
+				if jokers > 0 {
+					// 4 of a kind or higher.
+					category = 5 + jokers - 1
+				}
+			case 2:
+				if jokers > 0 {
+					// to full house
+					category = 4
+				}
+			case 1:
+				if jokers == 1 {
+					category = 3
+				}
+				if jokers > 1 {
+					category = 5 + jokers - 2
+				}
+			case 0:
+				if jokers == 1 {
+					category = 1
+				}
+				if jokers == 2 {
+					category = 3
+				}
+				if jokers > 2 {
+					category = 5 + jokers - 3
+				}
+			}
+		}
+
+		switch category {
+		case 6:
+			name = "5 of a kind"
+		case 5:
+			name = "4 of a kind"
+		case 4:
+			name = "full house"
+		case 3:
+			name = "3 of a kind"
+		case 2:
+			name = "2 pair"
+		case 1:
+			name = "1 pair"
+		case 0:
+			name = "high card"
+		}
+
+		if category > 6 {
+			category = 6
 		}
 
 		var strength int64
