@@ -20,14 +20,14 @@ func main() {
 			continue
 		}
 		parts := strings.Split(line, " ")
-		nums := make([]int, len(parts))
-		for i, part := range parts {
+		var nums []int
+		for _, part := range parts {
 			num, err := strconv.Atoi(part)
 			if err != nil {
 				panic(err)
 			}
 
-			nums[i] = num
+			nums = append([]int{num}, nums...)
 		}
 
 		sum += calc(nums)
