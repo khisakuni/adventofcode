@@ -59,13 +59,13 @@ func main() {
 		if ay > by {
 			for _, r := range rows[by:ay] {
 				if r == 0 {
-					height++
+					height += 999999
 				}
 			}
 		} else {
 			for _, r := range rows[ay:by] {
 				if r == 0 {
-					height++
+					height += 999999
 				}
 			}
 		}
@@ -73,14 +73,14 @@ func main() {
 		if ax > bx {
 			for _, c := range cols[bx:ax] {
 				if c == 0 {
-					width++
+					width += 999999
 				}
 			}
 
 		} else {
 			for _, c := range cols[ax:bx] {
 				if c == 0 {
-					width++
+					width += 999999
 				}
 			}
 		}
