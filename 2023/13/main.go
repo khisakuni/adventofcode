@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"math/bits"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -13,77 +15,144 @@ func main() {
 
 	var sum int
 	for blockNum, block := range blocks {
-		// fmt.Printf("BLOCK %v\n", blockNum)
 
 		// Consider rows
 		var found bool
+		var fixed bool
+
 		lines := strings.Split(block, "\n")
-		for i, line := range lines[:len(lines)-1] {
-			// Found potential match
-			// fmt.Printf("comparing:\n%v\n%v\n\n", line, lines[i+1])
-			if line == lines[i+1] {
-				// fmt.Printf("found match!\n")
-				j := i
-				k := i + 1
-				for k < len(lines) && j >= 0 {
-					// fmt.Printf("comparing\n%v\n%v\n\n", lines[j], lines[k])
-					if lines[j] != lines[k] {
-						// fmt.Printf("not the same\n%v\n%v\n\n", lines[j], lines[k])
+
+		// Convert to numbers
+		nums := []uint32{}
+		for _, line := range lines {
+			if line == "" {
+				continue
+			}
+			line = strings.ReplaceAll(line, "#", "1")
+			line = strings.ReplaceAll(line, ".", "0")
+
+			if len(line) < 32 {
+				line = strings.Repeat("0", 32-len(line)) + line
+			}
+
+			num, err := strconv.ParseUint(line, 2, 32)
+			if err != nil {
+				panic(err)
+			}
+
+			nums = append(nums, uint32(num))
+		}
+
+		for i, num := range nums[:len(nums)-1] {
+			isOneOff := bits.OnesCount32(num^nums[i+1]) == 1
+			if num == nums[i+1] || isOneOff {
+				j := i - 1
+				k := i + 2
+				for k < len(nums) && j >= 0 {
+					oneOff := bits.OnesCount32(nums[j]^nums[k]) == 1
+					if oneOff && !isOneOff {
+						isOneOff = true
+						k++
+						j--
+						continue
+					}
+
+					if nums[j] != nums[k] {
 						break
 					}
+
 					k++
 					j--
 				}
-				// fmt.Printf("k >>>>>>> %v, %v\n", k, len(lines)-1)
-				if k == len(lines) || j == -1 {
-					// fmt.Printf("horizontal sum: %v\n", i+1)
+
+				if (k == len(nums) || j == -1) && isOneOff {
 					sum += (i + 1) * 100
 					found = true
+					if isOneOff {
+						fixed = true
+					}
 					break
 				}
+
 			}
 		}
 
-		if found {
+		if found && fixed {
 			continue
 		}
 
-		// fmt.Printf("VERTICAL\n")
 		// Consider columns
 		// Rotate image 90 deg.
-		rows := make([][]byte, len(lines[0]))
+		rowBytes := make([][]byte, len(lines[0]))
 		for _, line := range lines {
+			if line == "" {
+				continue
+			}
+
 			for i, c := range line {
-				rows[i] = append([]byte{byte(c)}, rows[i]...)
+				b := '0'
+				if c == '#' {
+					b = '1'
+				}
+				rowBytes[i] = append([]byte{byte(b)}, rowBytes[i]...)
 			}
 		}
 
-		for i, line := range rows[:len(rows)-1] {
-			// Found potential match
-			// fmt.Printf("comparing:\n%v\n%v\n\n", string(line), string(rows[i+1]))
-			if string(line) == string(rows[i+1]) {
-				// fmt.Printf("found match!\n")
-				j := i
-				k := i + 1
+		var rows []uint32
+		for _, line := range rowBytes {
+
+			if len(line) < 32 {
+				line = append([]byte(strings.Repeat("0", 32-len(line))), line...)
+			}
+
+			num, err := strconv.ParseUint(string(line), 2, 32)
+			if err != nil {
+				panic(err)
+			}
+
+			rows = append(rows, uint32(num))
+		}
+
+		// fmt.Printf("\n%v\n", strings.Join(rows, "\n"))
+
+		for i, num := range rows[:len(rows)-1] {
+			isOneOff := bits.OnesCount32(num^rows[i+1]) == 1
+			// fmt.Printf("col: %v, %v:%v\n", i, num, rows[i+1])
+			if num == rows[i+1] || isOneOff {
+				j := i - 1
+				k := i + 2
 				for k < len(rows) && j >= 0 {
-					if string(rows[j]) != string(rows[k]) {
-						// fmt.Printf("not the same\n%v\n%v\n\n", string(rows[j]), string(rows[k]))
+					oneOff := bits.OnesCount32(rows[j]^rows[k]) == 1
+					if oneOff && !isOneOff {
+						isOneOff = true
+						k++
+						j--
+						continue
+					}
+
+					if rows[j] != rows[k] {
 						break
 					}
+
 					k++
 					j--
 				}
-				if k == len(rows) || j == -1 {
+
+				if (k == len(rows) || j == -1) && isOneOff {
 					sum += i + 1
-					// fmt.Printf("vertical sum: %v\n", i+1)
 					found = true
+					fixed = true
 					break
 				}
+
 			}
 		}
 
 		if !found {
 			fmt.Printf("did not find: %v\n", blockNum)
+		}
+		if !fixed {
+			fmt.Printf("did not fix: %v\n", blockNum)
 		}
 	}
 
