@@ -11,39 +11,38 @@ func main() {
 	lines := bytes.Split(data, []byte{'\n'})
 	rows := lines
 
-	// cache := map[string]int{}
-	// indexToRows := map[int][][]byte{}
-	//
-	// directions := 4
-	// cycles := 1000000000
-	//
-	// var prefixLen, cycleLen, i int
-	// for i < cycles {
-	// 	h := hash(rows)
-	// 	if dupe, ok := cache[h]; ok {
-	// 		// fmt.Printf("dupe of %v\n", dupe)
-	// 		prefixLen = dupe
-	// 		cycleLen = i - prefixLen
-	// 		break
-	// 	} else {
-	// 		cache[h] = i
-	// 		indexToRows[i] = rows
-	// 	}
-	//
-	// 	for j := 0; j < directions; j++ {
-	// 		rows = rotate(rows)
-	// 		roll(rows)
-	// 	}
-	//
-	// 	i++
-	// }
-	//
-	// n := ((cycles - prefixLen) % cycleLen) + prefixLen
-	// rows = indexToRows[n]
+	cache := map[string]int{}
+	indexToRows := map[int][][]byte{}
+
+	directions := 4
+	cycles := 1000000000
+
+	var prefixLen, cycleLen, i int
+	for i < cycles {
+		h := hash(rows)
+		if dupe, ok := cache[h]; ok {
+			// fmt.Printf("dupe of %v\n", dupe)
+			prefixLen = dupe
+			cycleLen = i - prefixLen
+			break
+		} else {
+			cache[h] = i
+			indexToRows[i] = rows
+		}
+
+		for j := 0; j < directions; j++ {
+			rows = rotate(rows)
+			roll(rows)
+		}
+
+		i++
+	}
+
+	n := ((cycles - prefixLen) % cycleLen) + prefixLen
+	rows = indexToRows[n]
 
 	var sum int
 	rows = rotate(rows)
-	roll(rows)
 	for _, row := range rows {
 		for j, c := range row {
 			if c == 'O' {
