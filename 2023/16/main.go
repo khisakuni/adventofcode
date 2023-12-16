@@ -19,11 +19,70 @@ func main() {
 	data, _ := os.ReadFile("input.txt")
 
 	grid := bytes.Split(data, []byte{'\n'})
+	grid = grid[:len(grid)-1]
 
+	var max int
+
+	// max = sum(grid, []int{0, 3, south})
+
+	for i := 0; i < len(grid); i++ {
+		c := copyGrid(grid)
+
+		// for _, row := range c {
+		// 	fmt.Printf("%v\n", string(row))
+		// }
+		s := sum(c, []int{i, 0, east})
+		// fmt.Printf("sum: %v\n", s)
+		if s > max {
+			max = s
+		}
+	}
+
+	for i := 0; i < len(grid); i++ {
+		c := copyGrid(grid)
+		s := sum(c, []int{i, len(grid[0]) - 1, west})
+		// fmt.Printf("sum: %v\n", s)
+		if s > max {
+			max = s
+		}
+	}
+
+	for i := 0; i < len(grid[0]); i++ {
+		c := copyGrid(grid)
+		s := sum(c, []int{0, i, south})
+		// fmt.Printf("sum: %v\n", s)
+		if s > max {
+			max = s
+		}
+	}
+
+	for i := 0; i < len(grid[0]); i++ {
+		c := copyGrid(grid)
+		s := sum(c, []int{len(grid) - 1, i, north})
+		// fmt.Printf("sum: %v\n", s)
+		if s > max {
+			max = s
+		}
+	}
+
+	fmt.Printf("count: %v\n", max)
+}
+
+func copyGrid(src [][]byte) [][]byte {
+	grid := make([][]byte, len(src))
+	for i, s := range src {
+		n := make([]byte, len(s))
+		copy(n, s)
+		grid[i] = n
+	}
+	return grid
+}
+
+func sum(grid [][]byte, start []int) int {
+	// fmt.Printf("start: %v\n", start)
 	visited := map[string]map[int]bool{}
-
+	queue := [][]int{start}
 	var count int
-	queue := [][]int{{0, 0, east}}
 	for len(queue) > 0 {
 		var coords []int
 		coords, queue = queue[0], queue[1:]
@@ -143,19 +202,7 @@ func main() {
 		}
 	}
 
-	// for k := range visited {
-	// 	fmt.Printf("visited: %v\n", k)
-	// 	parts := strings.Split(k, "-")
-	// 	y, _ := strconv.Atoi(parts[0])
-	// 	x, _ := strconv.Atoi(parts[1])
-	// 	grid[y][x] = '#'
-	// }
-	//
-	// for _, row := range grid {
-	// 	fmt.Printf("%v\n", string(row))
-	// }
-
-	fmt.Printf("count: %v\n", count)
+	return count
 }
 
 func fmtKey(y, x int) string {
