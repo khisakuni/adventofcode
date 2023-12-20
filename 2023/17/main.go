@@ -90,15 +90,10 @@ func main() {
 
 	data := strings.Split(input, "\n")
 	grid := data[:len(data)-1]
-	out := dijkstra(grid, 3)
+	out := dijkstra(grid, 10)
 
 	fmt.Println("total:", out)
 }
-
-// func part2(input string) int {
-// 	grid := parse(input)
-// 	return dijkstra(grid, 10, 4)
-// }
 
 func dijkstra(grid []string, maxConsecutive int) int {
 	m := len(grid)
@@ -119,7 +114,7 @@ func dijkstra(grid []string, maxConsecutive int) int {
 			continue
 		}
 
-		if curr.state.row == m-1 && curr.state.col == n-1 {
+		if curr.state.row == m-1 && curr.state.col == n-1 && curr.state.moves >= 4 {
 			return curr.heatLoss
 		}
 
@@ -134,10 +129,17 @@ func dijkstra(grid []string, maxConsecutive int) int {
 			ni, nj := curr.state.row+dir.row, curr.state.col+dir.col
 			nextMoves := curr.state.moves
 
-			if dir != curr.state.dir {
-				nextMoves = 1
-			} else {
+			if curr.state.moves < 4 {
+				if dir != curr.state.dir {
+					continue
+				}
 				nextMoves += 1
+			} else {
+				if dir != curr.state.dir {
+					nextMoves = 1
+				} else {
+					nextMoves = nextMoves%maxConsecutive + 1
+				}
 			}
 
 			if ni < 0 || ni >= m || nj < 0 || nj >= n {
