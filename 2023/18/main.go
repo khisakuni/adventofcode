@@ -3,95 +3,68 @@ package main
 import (
 	"fmt"
 	"os"
+	// "slices"
 	"strconv"
 	"strings"
 )
 
-const gridSize = 1000
+const (
+	directionDown = iota
+	directionUp
+)
 
 func main() {
 	data, _ := os.ReadFile("input.txt")
 	lines := strings.Split(string(data), "\n")
 
-	grid := make([][]byte, gridSize)
-	for i := range grid {
-		grid[i] = make([]byte, gridSize)
-		for j := range grid[i] {
-			grid[i][j] = '.'
-		}
-	}
-
-	var count int
-	row := 500
-	col := 500
+	var coords [][]int64
+	var x, y int64
+	// m[0] = []int64{col}
+	var lineLen int64
 	for _, line := range lines {
 		if line == "" {
 			continue
 		}
 		parts := strings.Split(line, " ")
-		d := parts[0]
-		l, _ := strconv.Atoi(parts[1])
+		instruction := parts[2]
+		l, _ := strconv.ParseInt(instruction[2:7], 16, 64)
+		d := instruction[7]
 
+		// fmt.Printf(">> %v, %v\n", d, l)
+
+		lineLen += l
 		switch d {
-		case "R":
-			for i := 0; i < l; i++ {
-				grid[row][col] = '#'
-				col++
-				count++
-			}
-		case "D":
-			for i := 0; i < l; i++ {
-				grid[row][col] = '#'
-				row++
-				count++
-			}
-		case "L":
-			for i := 0; i < l; i++ {
-				grid[row][col] = '#'
-				col--
-				count++
-			}
-		case "U":
-			for i := 0; i < l; i++ {
-				grid[row][col] = '#'
-				row--
-				count++
-			}
+		// Right
+		case '0':
+			// case "R":
+			x += l
+		// Down
+		case '1':
+			// case "D":
+			coords = append(coords, []int64{x, y}, []int64{x, y + l})
+			y += l
+		// Left
+		case '2':
+			// case "L":
+			x -= l
+		// Up
+		case '3':
+			// case "U":
+			coords = append(coords, []int64{x, y}, []int64{x, y - l})
+			y -= l
 		}
 	}
 
-	queue := [][]int{
-		{501, 501},
+	var left, right int64
+	for i := 0; i < len(coords)-1; i++ {
+		current := coords[i]
+		next := coords[i+1]
+
+		left += current[0] * next[1]
+		right += current[1] * next[0]
 	}
 
-	for len(queue) > 0 {
-		var current []int
-		current, queue = queue[0], queue[1:]
-		row, col = current[0], current[1]
-		if grid[row][col] == '#' {
-			continue
-		}
-		if row < 0 || row >= len(grid) {
-			continue
-		}
-		if col < 0 || col >= len(grid[0]) {
-			continue
-		}
+	area := (left - right) / 2
 
-		grid[row][col] = '#'
-		count++
-		queue = append(
-			queue,
-			[]int{row - 1, col},
-			[]int{row + 1, col},
-			[]int{row, col + 1},
-			[]int{row, col - 1},
-		)
-	}
-
-	// for _, l := range grid {
-	// 	fmt.Printf("%v\n", string(l))
-	// }
-
-	fmt.Printf("count: %v\n", count)
+	fmt.Printf("count: %v\n", area+(lineLen/2)+1)
 }
