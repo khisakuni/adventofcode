@@ -1,6 +1,7 @@
 package main
 
 import (
+	// "errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -8,75 +9,243 @@ import (
 	"strings"
 )
 
+// func parseWorkFlows(lines []string) (map[string]string, error) {
+// 	var key string
+// 	wfs := make(map[string]string)
+// 	for _, line := range lines {
+// 		if len(line) > 2 {
+// 			ws := strings.Split(line[:len(line)-1], "{")
+// 			if len(ws) != 2 {
+// 				return wfs, errors.New("invalid input")
+// 			}
+// 			ops := strings.Split(ws[1], ",")
+// 			if len(ops) == 2 {
+// 				key := ws[0]
+// 				wfs[key] = ws[1]
+// 			} else {
+// 				for i := 0; i < len(ops)-1; i++ {
+// 					if i == 0 {
+// 						key = ws[0]
+// 					} else {
+// 						key = fmt.Sprintf("%s%d", ws[0], i)
+// 					}
+// 					if i == len(ops)-2 {
+// 						wfs[key] = fmt.Sprintf("%s,%s", ops[i], ops[i+1])
+// 					} else {
+// 						wfs[key] = fmt.Sprintf("%s,%s%d", ops[i], ws[0], i+1)
+// 					}
+// 				}
+// 			}
+// 		} else {
+// 			break
+// 		}
+// 	}
+// 	return wfs, nil
+// }
+//
+// func getAccepted(wfKey string, xMin, xMax, mMin, mMax, aMin, aMax, sMin, sMax int, wfs map[string]string) int {
+// 	if wfKey == "A" {
+// 		return (xMax - xMin + 1) * (mMax - mMin + 1) * (aMax - aMin + 1) * (sMax - sMin + 1)
+// 	} else if wfKey == "R" {
+// 		return 0
+// 	} else {
+// 		acc := 0
+// 		condition := wfs[wfKey]
+// 		a := strings.Split(condition, ":")
+// 		options := strings.Split(a[1], ",")
+// 		trueOption := options[0]
+// 		falseOption := options[1]
+// 		param := a[0][0]
+// 		symbol := a[0][1]
+// 		value, _ := strconv.Atoi(a[0][2:])
+// 		switch param {
+// 		case 'x':
+// 			if symbol == '>' {
+// 				acc += getAccepted(trueOption, value+1, xMax, mMin, mMax, aMin, aMax, sMin, sMax, wfs)
+// 				acc += getAccepted(falseOption, xMin, value, mMin, mMax, aMin, aMax, sMin, sMax, wfs)
+// 			} else {
+// 				acc += getAccepted(trueOption, xMin, value-1, mMin, mMax, aMin, aMax, sMin, sMax, wfs)
+// 				acc += getAccepted(falseOption, value, xMax, mMin, mMax, aMin, aMax, sMin, sMax, wfs)
+// 			}
+// 		case 'm':
+// 			if symbol == '>' {
+// 				acc += getAccepted(trueOption, xMin, xMax, value+1, mMax, aMin, aMax, sMin, sMax, wfs)
+// 				acc += getAccepted(falseOption, xMin, xMax, mMin, value, aMin, aMax, sMin, sMax, wfs)
+// 			} else {
+// 				acc += getAccepted(trueOption, xMin, xMax, mMin, value-1, aMin, aMax, sMin, sMax, wfs)
+// 				acc += getAccepted(falseOption, xMin, xMax, value, mMax, aMin, aMax, sMin, sMax, wfs)
+// 			}
+// 		case 'a':
+// 			if symbol == '>' {
+// 				acc += getAccepted(trueOption, xMin, xMax, mMin, mMax, value+1, aMax, sMin, sMax, wfs)
+// 				acc += getAccepted(falseOption, xMin, xMax, mMin, mMax, aMin, value, sMin, sMax, wfs)
+// 			} else {
+// 				acc += getAccepted(trueOption, xMin, xMax, mMin, mMax, aMin, value-1, sMin, sMax, wfs)
+// 				acc += getAccepted(falseOption, xMin, xMax, mMin, mMax, value, aMax, sMin, sMax, wfs)
+// 			}
+// 		case 's':
+// 			if symbol == '>' {
+// 				acc += getAccepted(trueOption, xMin, xMax, mMin, mMax, aMin, aMax, value+1, sMax, wfs)
+// 				acc += getAccepted(falseOption, xMin, xMax, mMin, mMax, aMin, aMax, sMin, value, wfs)
+// 			} else {
+// 				acc += getAccepted(trueOption, xMin, xMax, mMin, mMax, aMin, aMax, sMin, value-1, wfs)
+// 				acc += getAccepted(falseOption, xMin, xMax, mMin, mMax, aMin, aMax, value, sMax, wfs)
+// 			}
+// 		}
+// 		return acc
+// 	}
+// }
+//
+// func getAllCombinations(input []string) (int, error) {
+// 	if wfs, err := parseWorkFlows(input); err != nil {
+// 		return 0, err
+// 	} else {
+// 		for k, wf := range wfs {
+// 			fmt.Printf(">>> %v: %v\n", k, wf)
+// 		}
+// 		return getAccepted("in", 1, 4000, 1, 4000, 1, 4000, 1, 4000, wfs), nil
+// 	}
+// }
+
 func main() {
 	data, _ := os.ReadFile("input.txt")
 
 	wfRe := regexp.MustCompile("([a-z]+){(.*)}")
-	partRe := regexp.MustCompile("{(.*)}")
 
 	ruleRe := regexp.MustCompile(`([a-z]+)(>|<)(\d+):([a-zA-Z]+)`)
 
 	lines := strings.Split(string(data), "\n")
 
-	workflows := map[string]Workflow{}
+	workflows := map[string][]Rule{}
 
-	var parts []Part
-	var processParts bool
 	for _, line := range lines {
 		if line == "" {
-			processParts = true
-			continue
+			break
 		}
 
-		if processParts {
-			valsStr := partRe.FindStringSubmatch(line)[1]
-			vals := strings.Split(valsStr, ",")
-			part := Part{
-				X: parseInt(vals[0][2:]),
-				M: parseInt(vals[1][2:]),
-				A: parseInt(vals[2][2:]),
-				S: parseInt(vals[3][2:]),
+		parts := wfRe.FindStringSubmatch(line)[1:]
+		wfName := parts[0]
+		ruleParts := strings.Split(parts[1], ",")
+		for i, part := range ruleParts {
+			if i == len(ruleParts)-1 {
+				workflows[wfName] = append(workflows[wfName], Rule{Next: part})
+				continue
 			}
-			parts = append(parts, part)
+			p := ruleRe.FindStringSubmatch(part)[1:]
+			v := p[0]
+			op := p[1]
+			val, _ := strconv.Atoi(p[2])
+			next := p[3]
+
+			r := Rule{
+				Workflow: wfName,
+				Var:      v,
+				Op:       op,
+				Val:      val,
+				Next:     next,
+			}
+
+			workflows[wfName] = append(workflows[wfName], r)
+		}
+
+	}
+
+	// for k, v := range workflows {
+	// 	fmt.Printf("k: %v, v: %v\n", k, v)
+	// }
+
+	combos := dfs(workflows, "in", Spec{
+		Max: map[string]int{
+			"x": 4000,
+			"m": 4000,
+			"a": 4000,
+			"s": 4000,
+		},
+		Min: map[string]int{
+			"x": 1,
+			"m": 1,
+			"a": 1,
+			"s": 1,
+		},
+	})
+
+	// expected := 167409079868000
+
+	// fmt.Printf("specs: %v, diff: (%v)\n", combos, expected-combos)
+	// accepted := graph["A"]
+	// for _, node := range accepted {
+	//   if node.Var == "" {
+	//     fmt.Printf("found root! %v\n", node.Workflow)
+	//   }
+	//
+	// }
+	// val, err := getAllCombinations(lines)
+	fmt.Printf("answer: %v\n", combos)
+}
+
+func dfs(graph map[string][]Rule, name string, spec Spec) int {
+	if name == "R" {
+		return 0
+	}
+
+	if name == "A" {
+		// fmt.Printf("found! max: %v, min: %v\n", spec.Max, spec.Min)
+		total := (spec.Max["x"] - spec.Min["x"] + 1) * (spec.Max["m"] - spec.Min["m"] + 1) * (spec.Max["a"] - spec.Min["a"] + 1) * (spec.Max["s"] - spec.Min["s"] + 1)
+		return total
+	}
+
+	rules := graph[name]
+	neg := Spec{
+		Max: copyMap(spec.Max),
+		Min: copyMap(spec.Min),
+	}
+	var total int
+	// fmt.Printf("wf: %v: rules: %v\n", name, rules)
+	for _, r := range rules {
+		if r.Op == ">" {
+			s := Spec{
+				Max: copyMap(spec.Max),
+				Min: copyMap(spec.Min),
+			}
+			for k, v := range neg.Max {
+				s.Max[k] = v
+			}
+			for k, v := range neg.Min {
+				s.Min[k] = v
+			}
+			s.Min[r.Var] = r.Val + 1
+			neg.Max[r.Var] = r.Val
+			total += dfs(graph, r.Next, s)
+		} else if r.Op == "<" {
+			s := Spec{
+				Max: copyMap(spec.Max),
+				Min: copyMap(spec.Min),
+			}
+			for k, v := range neg.Max {
+				s.Max[k] = v
+			}
+			for k, v := range neg.Min {
+				s.Min[k] = v
+			}
+			s.Max[r.Var] = r.Val - 1
+			neg.Min[r.Var] = r.Val
+			total += dfs(graph, r.Next, s)
 		} else {
-			parts := wfRe.FindStringSubmatch(line)[1:]
-			wfName := parts[0]
-			var wf Workflow
-
-			var rules []Rule
-			ruleParts := strings.Split(parts[1], ",")
-			for i, part := range ruleParts {
-				if i == len(ruleParts)-1 {
-					rules = append(rules, Rule{Next: part})
-					continue
-				}
-				p := ruleRe.FindStringSubmatch(part)[1:]
-				v := p[0]
-				op := p[1]
-				val, _ := strconv.Atoi(p[2])
-				next := p[3]
-
-				rules = append(rules, Rule{
-					Var:  v,
-					Op:   op,
-					Val:  val,
-					Next: next,
-				})
-			}
-
-			wf.Rules = rules
-			workflows[wfName] = wf
+			total += dfs(graph, r.Next, neg)
 		}
 	}
 
-	var sum int
-	for _, p := range parts {
-		if workflows["in"].Eval(workflows, p) {
-			sum += p.X + p.M + p.A + p.S
-		}
+	// fmt.Printf("dead end\n")
+	return total
+}
+
+func copyMap(in map[string]int) map[string]int {
+	out := map[string]int{}
+	for k, v := range in {
+		out[k] = v
 	}
 
-	fmt.Printf("sum: %v\n", sum)
+	return out
 }
 
 func parseInt(str string) int {
@@ -84,100 +253,24 @@ func parseInt(str string) int {
 	return val
 }
 
-type Workflow struct {
-	Rules []Rule
-}
-
-func (w Workflow) Eval(wfs map[string]Workflow, p Part) bool {
-	for _, r := range w.Rules {
-		out := r.Eval(p)
-		if out.Accepted {
-			return true
-		}
-		if out.Rejected {
-			return false
-		}
-		if out.Next != "" {
-			return wfs[out.Next].Eval(wfs, p)
-		}
-	}
-
-	return false
+type Spec struct {
+	Max map[string]int
+	Min map[string]int
 }
 
 type Rule struct {
-	Var  string
-	Val  int
-	Op   string
-	Next string
+	Workflow string
+	Var      string
+	Val      int
+	Op       string
+	Next     string
 }
 
-func (r Rule) Eval(p Part) Outcome {
-	switch r.Op {
-	case "":
-		if r.Next == "A" {
-			return Outcome{Accepted: true}
-		}
-		if r.Next == "R" {
-			return Outcome{Rejected: true}
-		}
-
-		return Outcome{Next: r.Next}
-	case ">":
-		var val int
-		switch r.Var {
-		case "x":
-			val = p.X
-		case "m":
-			val = p.M
-		case "a":
-			val = p.A
-		case "s":
-			val = p.S
-		}
-
-		if val > r.Val {
-			if r.Next == "A" {
-				return Outcome{Accepted: true}
-			}
-			if r.Next == "R" {
-				return Outcome{Rejected: true}
-			}
-
-			return Outcome{Next: r.Next}
-
-		}
-
-		return Outcome{}
-	case "<":
-		var val int
-		switch r.Var {
-		case "x":
-			val = p.X
-		case "m":
-			val = p.M
-		case "a":
-			val = p.A
-		case "s":
-			val = p.S
-		}
-
-		if val < r.Val {
-			if r.Next == "A" {
-				return Outcome{Accepted: true}
-			}
-			if r.Next == "R" {
-				return Outcome{Rejected: true}
-			}
-
-			return Outcome{Next: r.Next}
-
-		}
-
-		return Outcome{}
+func (r Rule) String() string {
+	if r.Var == "" {
+		return fmt.Sprintf("(-> %v)", r.Next)
 	}
-
-	return Outcome{}
+	return fmt.Sprintf("(%s %s %d -> %v)", r.Var, r.Op, r.Val, r.Next)
 }
 
 type Outcome struct {
