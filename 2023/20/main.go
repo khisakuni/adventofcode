@@ -1,274 +1,142 @@
 package main
 
+// Credit to https://github.com/dannyvankooten/advent-of-code/blob/main/2023/20-pulse-propagation/main.go
+
 import (
-	// "bytes"
-	// "crypto/md5"
 	"fmt"
 	"os"
-	"sort"
 	"strings"
 )
 
 func main() {
 	data, _ := os.ReadFile("input.txt")
-	lines := strings.Split(string(data), "\n")
-	env := Env{
-		Modules: map[string]Module{
-			"output": &Output{},
+
+	// lines := strings.Split(string(data), "\n")
+
+	modules := map[string]Module{
+		"button": {
+			typ:     TYPE_BUTTON,
+			targets: []string{"broadcaster"},
 		},
 	}
 
-	receiverToSenders := map[string][]string{}
-
-	for _, line := range lines {
-		if line == "" {
-			continue
+	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		m := Module{}
+		pos := strings.Index(line, " ")
+		var name string
+		if line[0] == TYPE_FLIPFLOP || line[0] == TYPE_CONJUNCTION {
+			m.typ = rune(line[0])
+			name = line[1:pos]
+		} else {
+			m.typ = TYPE_BROADCASTER
+			name = line[:pos]
 		}
+		line = line[strings.Index(line, " -> ")+4:]
+		m.targets = strings.Split(line, ", ")
+		m.memory = make(map[string]bool)
+		modules[name] = m
+	}
 
-		parts := strings.Split(line, "->")
-		sender := strings.TrimSpace(parts[0])
-		receiverParts := strings.Split(parts[1], ",")
-		var receivers []string
-		for _, p := range receiverParts {
-			receivers = append(receivers, strings.TrimSpace(p))
-		}
-
-		var senderName string
-		switch sender[0] {
-		case '%':
-			env.Modules[sender[1:]] = &FlipFlop{
-				On:        false,
-				Receivers: receivers,
+	// init memory
+	for k, input := range modules {
+		for _, t := range input.targets {
+			dest := modules[t]
+			if dest.typ == TYPE_CONJUNCTION {
+				dest.memory[k] = false
 			}
-			senderName = sender[1:]
-		case '&':
-			env.Modules[sender[1:]] = &Conjunction{
-				Memory:    map[string]bool{},
-				Receivers: receivers,
-			}
-			senderName = sender[1:]
-		default:
-			env.Modules[sender] = &Broadcaster{
-				Receivers: receivers,
-			}
-			senderName = sender
-		}
-
-		for _, r := range receivers {
-			receiverToSenders[r] = append(receiverToSenders[r], senderName)
 		}
 	}
 
-	for k, v := range env.Modules {
-		con, ok := v.(*Conjunction)
-		if !ok {
-			continue
-		}
+	factors := make(map[string]int)
+	pulses := make([]Pulse, 0)
+	for i := 1; len(factors) != len(modules["qt"].memory); i++ {
+		pulses = pulses[:0]
 
-		// fmt.Printf(">>>>>>>>>>>>>>>>>>> %v, %v\n", k, receiverToSenders[k])
+		// first pulse is a low from button to broadcaster
+		pulses = append(pulses, Pulse{
+			source: "button",
+			dest:   "broadcaster",
+			value:  false,
+		})
 
-		for _, s := range receiverToSenders[k] {
-			con.Memory[s] = false
+		// keep processing pulses until nothing in queue
+		for len(pulses) > 0 {
+			pulse := pulses[0]
+			pulses = pulses[1:]
+			pulses = append(pulses, pulse.Handle(modules)...)
+
+			// check memory values for each input
+			for k, v := range modules["qt"].memory {
+				_, ok := factors[k]
+				if !ok && v {
+					fmt.Printf(">>>>>> %v, %v\n", modules["qt"], i)
+					factors[k] = i
+				}
+			}
 		}
 	}
 
-	// con := env.Modules["con"].(*Conjunction)
-	// con.Memory["b"] = false
-	// con.Memory["a"] = false
-
-	// initial := env.String() //md5.Sum([]byte(env.String()))
-	// var state string
-	// var state []byte
-	//
-	var counts []Count
-
-	// fmt.Printf("%v\n", env.String())
-
-	queue := []Pulse{{Sender: "button", High: false, Recipient: "broadcaster"}}
-	for i := 0; i < 1000; i++ {
-		var c Count
-		for len(queue) > 0 {
-			var pulse Pulse
-			pulse, queue = queue[0], queue[1:]
-			// fmt.Printf(">> %+v\n", pulse)
-
-			if pulse.High {
-				c.High++
-			} else {
-				c.Low++
-			}
-
-			// fmt.Printf("%v\n", pulse.Recipient)
-			module, ok := env.Modules[pulse.Recipient]
-			if !ok {
-				continue
-			}
-			pulses := module.Receive(pulse)
-			for i := range pulses {
-				pulses[i].Sender = pulse.Recipient
-			}
-
-			// for _, p := range pulses {
-			// 	fmt.Printf(">>>> %+v\n", p)
-			// }
-
-			if len(pulses) > 0 {
-				queue = append(queue, pulses...)
-			}
-
-			// next := md5.Sum([]byte(env.String()))
-			// state = next[:]
-
-			// fmt.Printf("%v\n\n", env.String())
-		}
-
-		// state = env.String()
-		counts = append(counts, c)
-		queue = append(queue, Pulse{Sender: "button", High: false, Recipient: "broadcaster"})
-
-		// next := md5.Sum([]byte(env.String()))
-		// state = next[:]
+	product := 1
+	for _, v := range factors {
+		product *= v
 	}
 
-	// fmt.Printf("counts: %+v\n", counts)
-	//
-	// fmt.Printf("%v -> %v\n", env, initial)
-
-	var highs int
-	var lows int
-	for i := 0; i < 1000; i++ {
-		highs += counts[i%len(counts)].High
-		lows += counts[i%len(counts)].Low
-	}
-
-	fmt.Printf("high: %v, low: %v, combined: %v\n", highs, lows, highs*lows)
+	fmt.Printf("pushes: %v\n", product)
 }
 
-type Count struct {
-	High int
-	Low  int
-}
-
-type Module interface {
-	Receive(Pulse) []Pulse
+type Module struct {
+	typ     rune
+	targets []string
+	status  bool
+	memory  map[string]bool
 }
 
 type Pulse struct {
-	Sender    string
-	High      bool
-	Recipient string
+	source string
+	value  bool
+	dest   string
 }
 
-type Env struct {
-	Modules map[string]Module
-}
+func (p *Pulse) Handle(modules map[string]Module) []Pulse {
+	sout := false
+	m := modules[p.dest]
 
-func (e Env) String() string {
-	var keys []string
-	for k := range e.Modules {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-	var parts []string
-	for _, k := range keys {
-		parts = append(parts, fmt.Sprintf("%v", e.Modules[k]))
-	}
-
-	return strings.Join(parts, " ")
-}
-
-type Broadcaster struct {
-	Receivers []string
-}
-
-func (b *Broadcaster) String() string {
-	return "b:"
-}
-
-func (b *Broadcaster) Receive(p Pulse) []Pulse {
-	next := make([]Pulse, len(b.Receivers))
-	for i, r := range b.Receivers {
-		next[i] = Pulse{High: p.High, Recipient: r}
-	}
-	return next
-}
-
-type FlipFlop struct {
-	On        bool
-	Receivers []string
-}
-
-func (f *FlipFlop) String() string {
-	return fmt.Sprintf("%%:%v", f.On)
-}
-
-func (f *FlipFlop) Receive(p Pulse) []Pulse {
-	if p.High {
-		return nil
-	}
-
-	next := make([]Pulse, len(f.Receivers))
-	for i, r := range f.Receivers {
-		next[i] = Pulse{Recipient: r}
-		if f.On {
-			next[i].High = false
+	switch m.typ {
+	case TYPE_FLIPFLOP:
+		if p.value {
+			return nil
 		} else {
-			next[i].High = true
+			m.status = !m.status
+			sout = m.status
+		}
+	case TYPE_CONJUNCTION:
+		m.memory[p.source] = p.value
+		sout = false
+		for _, v := range m.memory {
+			if !v {
+				sout = true
+				break
+			}
+		}
+	case TYPE_BROADCASTER:
+		sout = p.value
+	}
+
+	out := make([]Pulse, len(m.targets))
+	for i, r := range m.targets {
+		out[i] = Pulse{
+			source: p.dest,
+			dest:   r,
+			value:  sout,
 		}
 	}
 
-	f.On = !f.On
+	modules[p.dest] = m
 
-	return next
+	return out
 }
 
-type Conjunction struct {
-	Memory    map[string]bool
-	Receivers []string
-}
-
-func (c *Conjunction) String() string {
-	var keys []string
-	for k := range c.Memory {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-	str := fmt.Sprintf("&:")
-	for _, key := range keys {
-		str += fmt.Sprintf("%s=%v,", key, c.Memory[key])
-	}
-
-	return str
-}
-
-func (c *Conjunction) Receive(p Pulse) []Pulse {
-	c.Memory[p.Sender] = p.High
-
-	high := false
-	for _, v := range c.Memory {
-		if !v {
-			high = true
-			break
-		}
-	}
-
-	next := make([]Pulse, len(c.Receivers))
-	for i, r := range c.Receivers {
-		next[i] = Pulse{Recipient: r, High: high}
-	}
-
-	return next
-}
-
-type Output struct {
-}
-
-func (o Output) String() string {
-	return "output"
-}
-
-func (o Output) Receive(p Pulse) []Pulse {
-	return nil
-}
+const TYPE_BUTTON = 'b'
+const TYPE_BROADCASTER = 'a'
+const TYPE_CONJUNCTION = '&'
+const TYPE_FLIPFLOP = '%'
