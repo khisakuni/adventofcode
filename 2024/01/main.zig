@@ -25,16 +25,29 @@ pub fn main() !void {
     std.mem.sort(i32, f, {}, comptime std.sort.asc(i32));
     std.mem.sort(i32, s, {}, comptime std.sort.asc(i32));
 
+    var map = std.AutoHashMap(i32, i8).init(std.heap.page_allocator);
+    defer map.deinit();
+
     var total: i32 = 0;
     var index: usize = 0;
     for (f) |num| {
-        var diff = num - s[index];
+        const sNum = s[index];
+        var diff = num - sNum;
         if (diff < 0) {
             diff *= -1;
         }
         total += diff;
         index += 1;
+
+        const freq = map.get(sNum) orelse 0;
+        try map.put(sNum, freq + 1);
     }
 
-    std.debug.print("{d}", .{total});
+    var part2Total: i32 = 0;
+    for (f) |num| {
+        const freq = map.get(num) orelse 0;
+        part2Total += num * freq;
+    }
+
+    std.debug.print("Part 1: {d}\nPart 2: {d}", .{ total, part2Total });
 }
