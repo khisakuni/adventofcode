@@ -28,6 +28,7 @@ var input string
 
 func main() {
 	part1()
+	part2()
 }
 
 func part1() {
@@ -82,4 +83,53 @@ func part1() {
 		}
 	}
 	fmt.Printf("part 1: %v\n", score)
+}
+
+func part2() {
+	lines := strings.Split(input, "\n")
+	grid := [][]rune{}
+	for _, line := range lines {
+		grid = append(grid, []rune(line))
+	}
+
+	var score int
+	var dfs func(x, y int, num rune) int
+	dfs = func(x, y int, num rune) int {
+		if x < 0 || y < 0 {
+			return 0
+		}
+
+		if x >= len(lines[0]) || y >= len(lines) {
+			return 0
+		}
+
+		if grid[y][x] != num {
+			return 0
+		}
+
+		if num == '9' {
+			return 1
+		}
+
+		// Up
+		localScore := dfs(x, y-1, num+1)
+
+		// Right
+		localScore += dfs(x+1, y, num+1)
+
+		// Down
+		localScore += dfs(x, y+1, num+1)
+
+		// Left
+		localScore += dfs(x-1, y, num+1)
+
+		return localScore
+	}
+
+	for y, line := range grid {
+		for x := range line {
+			score += dfs(y, x, '0')
+		}
+	}
+	fmt.Printf("part 2: %v\n", score)
 }
