@@ -3,8 +3,10 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //go:embed input.txt
@@ -14,9 +16,14 @@ var input string
 
 func main() {
 	part1()
+	part2()
 }
 
 func part1() {
+	t := time.Now()
+	defer func() {
+		fmt.Printf("%v\n", time.Since(t))
+	}()
 	stones := strings.Split(input, " ")
 
 	for i := 0; i < 25; i++ {
@@ -25,7 +32,6 @@ func part1() {
 			switch {
 			case stone == "0":
 				nextStones = append(nextStones, "1")
-				// fmt.Printf("stone: %v -> %v\n", stone, nextStones[len(nextStones)-1])
 			case len(stone)%2 == 0:
 				left := strings.TrimLeft(stone[:len(stone)/2], "0")
 				if left == "" {
@@ -36,19 +42,67 @@ func part1() {
 					right = "0"
 				}
 				nextStones = append(nextStones, left, right)
-				// fmt.Printf("stone: %v -> %v, %v\n", stone, nextStones[len(nextStones)-1], nextStones[len(nextStones)-2])
 			default:
 				num, _ := strconv.Atoi(stone)
 				num *= 2024
 				nextStones = append(nextStones, strconv.Itoa(num))
-				// fmt.Printf("stone: %v -> %v\n", stone, nextStones[len(nextStones)-1])
 			}
 
 		}
 
 		stones = nextStones
-		// fmt.Printf("%v\n", nextStones)
 	}
 
 	fmt.Printf("part 1: %v\n", len(stones))
+}
+
+func part2() {
+	t := time.Now()
+	defer func() {
+		fmt.Printf("%v\n", time.Since(t))
+	}()
+	stonesStrs := strings.Split(input, " ")
+
+	m := map[int]int{}
+	for _, s := range stonesStrs {
+		num, _ := strconv.Atoi(s)
+		m[num]++
+	}
+
+	for i := 0; i < 75; i++ {
+		next := map[int]int{}
+		for stone, count := range m {
+			if stone == 0 {
+				next[1] += count
+				continue
+			}
+
+			var n int
+			s := stone
+			for s > 0 {
+				s /= 10
+				n++
+			}
+
+			if n%2 == 0 {
+				pow := int(math.Pow10(n / 2))
+				left := stone / pow
+				right := stone % pow
+				next[left] += count
+				next[right] += count
+			} else {
+				next[stone*2024] += count
+
+			}
+		}
+
+		m = next
+	}
+
+	var total int
+	for _, v := range m {
+		total += v
+	}
+
+	fmt.Printf("part 2: %v\n", total)
 }
