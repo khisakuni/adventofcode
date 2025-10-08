@@ -28,6 +28,7 @@ var input string
 
 func main() {
 	part1()
+	part2()
 }
 
 func part1() {
@@ -64,4 +65,47 @@ func part1() {
 	}
 
 	fmt.Printf("part 1: %v\n", sum)
+}
+
+func part2() {
+	games := strings.Split(input, "\n\n")
+	var sum int
+	for _, game := range games {
+		game = strings.TrimSpace(game)
+		lines := strings.Split(game, "\n")
+
+		var aX, aY int
+		fmt.Sscanf(lines[0], "Button A: X+%d, Y+%d", &aX, &aY)
+
+		var bX, bY int
+		fmt.Sscanf(lines[1], "Button B: X+%d, Y+%d", &bX, &bY)
+
+		var pX, pY int
+		fmt.Sscanf(lines[2], "Prize: X=%d, Y=%d", &pX, &pY)
+
+		pX += 10000000000000
+		pY += 10000000000000
+
+		determinent := aX*bY - aY*bX
+		if determinent == 0 {
+			continue
+		}
+
+		numA := pX*bY - pY*bX
+		numB := aX*pY - aY*pX
+
+		if numA%determinent != 0 || numB%determinent != 0 {
+			continue
+		}
+
+		a := numA / determinent
+		b := numB / determinent
+		if a < 0 || b < 0 {
+			continue
+		}
+
+		sum += a*3 + b
+	}
+
+	fmt.Printf("part 2: %v\n", sum)
 }
